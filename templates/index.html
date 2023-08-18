@@ -1,35 +1,108 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8">
-    <title>Flask Client Camera Web App</title>
+{% extends "layouts/main_layout.html" %}
 
-    <style>
-    	#video {
-    		transform: rotateY(180deg);
-    		-webkit-transform:rotateY(180deg); /* Safari and Chrome */
-    		-moz-transform:rotateY(180deg); /* Firefox */
-    		
-    	}
-    </style>
-    <script
-      src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <script
-      src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.3/socket.io.js"></script>
-  </head>
+{% block content %}
+    <div class="row">
+        <div class="col-3 p-0">
+            <div class="status-box profil p-3">
+                <div class="row py-3">
+                    <div class="col-6">
+                        <h4>I Made Restu Weda</h4>
 
-  <body>
+                        <span class="font-so-small text-muted">Email</span>
+                        <span class="font-small"><b>Restu04@gmail.com</b></span>
 
-    <div id="container">
-      <video autoplay playsinline id="videoElement"></video>
-      <canvas id="canvas" width="400" height="300"></canvas>
+                        <div class="text-center mt-2">
+                            <a href="{{ url_for('setting') }}" class="btn dream-app btn-primary font-so-small py-1" style="width: 70%;">SETTING AKUN</a>
+                            <a href="#" class="btn btn-danger font-so-small p-1" style="width: 20%;">
+                                <i class="fa fa-sign-out"></i>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <img src="{{ url_for('static', filename='img/user.png') }}" style="height: 100%;" class="img-fluid img-cover rounded" alt="">
+                    </div>
+                </div>
+            </div>
+            <div class="status-box pilih-kamera px-3 py-4">
+                
+                    <select class="form-select" name="camera_index" id="camera_index" aria-label="Default select example">
+                        <option selected disabled>Pilih Kamera</option>
+                        <!-- loop -->
+                        
+                    </select>
+
+                    <div class="text-center mt-2">
+                        <button type="button" id="btn_post" value="Start/Stop Recording" class="btn dream-app btn-primary font-small py-1" style="width: 100%;">PROSES</button>
+                    </div>
+                
+            </div>
+            <div class="status-box hasil p-3 text-center">
+                <h4 class="text-dream-app"><b>HASIL</b></h4>
+                <!-- table -->
+                <table class="text-start font-bit-small text-dream-app text-bold">
+                    <tr>
+                        <td style="width: 120px;">
+                            Resolusi Frame
+                        </td>
+                        <td style="width: 20px;">
+                            :
+                        </td>
+                        <td>
+                            888 x 500
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="width: 120px;">
+                            Nilai FPS
+                        </td>
+                        <td style="width: 20px;">
+                            :
+                        </td>
+                        <td id="fps">
+                            0
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="width: 120px;">
+                            Status
+                        </td>
+                        <td style="width: 20px;">
+                            :
+                        </td>
+                        <td id="status">
+                            -
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="width: 120px;">
+                            Derajat
+                        </td>
+                        <td style="width: 20px;">
+                            :
+                        </td>
+                        <td id="degree">
+                            0&deg;
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <div class="footer text-center pt-4">
+                <p class="font-so-small">Copyright © Undiksha 2023</p>
+            </div>
+        </div>
+        <div class="col-9 py-3 ps-0 pe-3">
+            <div class="video-box d-flex justify-content-center align-items-center" style="height: 100%; width: 100%;">
+                <!-- <h3 class="text-light">BELUM ADA VIDEO</h3> -->
+                <div id="container" style="display: none;">
+                    <video autoplay playsinline id="videoElement"></video>
+                    <canvas id="canvas" width="400" height="300"></canvas>
+                </div>
+
+                <div class= 'video'>
+                    <img id="photo" style="width: 100% !important;">
+                    <!-- <h1>video</h1> -->
+                </div>
+            </div>
+        </div>
     </div>
-
-    <div class= 'video'>
-      <img id="photo" width="400" height="300">
-      <!-- <h1>video</h1> -->
-    </div>
-    <script  src="{{ url_for('static',filename='script.js') }}"></script>
-  </body>
-
-</html>
+{% endblock %}
