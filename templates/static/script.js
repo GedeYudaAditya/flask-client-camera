@@ -22,8 +22,8 @@ var file = document.getElementById("file");
 var isClicked = false;
 var path = "";
 
-video.width = 800; //400
-video.height = 500; //300
+video.width = 400; //400
+video.height = 300; //300
 
 navigator.mediaDevices
   .enumerateDevices()

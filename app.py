@@ -3,7 +3,7 @@ import os
 
 import cv2
 import numpy as np
-from flask import Flask, render_template, send_from_directory, request, session, redirect, url_for, Response, jsonify
+from flask import Flask, render_template, send_from_directory, request, session, redirect, url_for, Response, jsonify, flash
 from flask_socketio import SocketIO, emit
 
 import requests
@@ -39,6 +39,15 @@ minDistance = imageHeight/6.25
 # minDistance = 10
 
 global model
+
+# for database
+import mysql.connector
+# import hashlib
+from passlib.hash import sha256_crypt
+
+
+connect = mysql.connector.connect(host='localhost', port='3306', user='root', password='', database='dolphin')
+cursor = connect.cursor()
 
 
 app = Flask(__name__, static_folder="./templates/static")
@@ -423,6 +432,11 @@ def index():
         return redirect(url_for('login'))
 
     title = 'Home'
+    user = cursor.execute("SELECT * FROM users WHERE email = '" + str(session['email']) + "'")
+    user = cursor.fetchall()
+    nama = user[0][1]
+    email = user[0][2]
+    image = user[0][3]
     # all_cam = getCam()
 
     # if request.method == 'POST':
@@ -433,7 +447,7 @@ def index():
 
     #     return redirect(url_for('index'))
 
-    return render_template('index.html', title=title)
+    return render_template('index.html', title=title, nama=nama, email=email, image=image)
 
 @app.route('/setting')
 def setting():
@@ -441,8 +455,81 @@ def setting():
         return redirect(url_for('login'))
 
     title = 'Setting'
+    user = cursor.execute("SELECT * FROM users WHERE email = '" + str(session['email']) + "'")
+    user = cursor.fetchall()
+    nama = user[0][1]
+    email = user[0][2]
+    image = user[0][3]
 
-    return render_template('setting.html', title=title)
+    return render_template('setting.html', title=title, nama=nama, email=email, image=image)
+
+@app.route('/setting', methods=['POST'])
+def settingProses():
+    if 'email' not in session:
+        return redirect(url_for('login'))
+    
+    nama = request.form['nama']
+    email = request.form['email']
+    password = request.form['password']
+    password_confirm = request.form['password-confirmation']
+    my_image = request.files['image']
+
+    user = cursor.execute("SELECT * FROM users WHERE email = '" + str(session['email']) + "'")
+    user = cursor.fetchall()
+
+    errors = []
+
+    # validasi input
+    if nama == '':
+        errors.append('Nama tidak boleh kosong')
+    
+    if email == '':
+        errors.append('Email tidak boleh kosong')
+
+    if password == '':
+        errors.append('Password tidak boleh kosong')
+
+    if password_confirm == '':
+        errors.append('Konfirmasi Password tidak boleh kosong')
+
+    if password != password_confirm:
+        errors.append('Konfirmasi Password tidak sama')
+
+    if (password == password_confirm and len(errors) == 0):
+        try:
+            if my_image.filename != '':
+                # save image and rename image name
+                extension = my_image.filename.split('.')[1]
+                original_image_name = my_image.filename.split('.')[0]
+                image_name = original_image_name + str(waktu.time()) + '.' + extension
+                my_image.filename = image_name
+                my_image.save('templates/static/uploads/' + my_image.filename)
+
+                # delete old image
+                # check if in database image is not null
+                if user[0][3]:
+                    # delete old image
+                    os.remove('templates/static/uploads/' + user[0][3])
+            
+            password = sha256_crypt.encrypt(password)
+            cursor.execute("UPDATE users SET nama = '" + str(nama) + "', password = '" + str(password) + "', image = '" + str(image_name) + "' WHERE email = '" + str(email) + "'")
+            connect.commit()
+            flash('Data berhasil diubah', 'success')
+            return redirect(url_for('index'))
+        except Exception as e:
+            flash('Terjadi kesalahan pada database. ' + str(e), 'error')
+            print(e)
+            return redirect(url_for('setting'))
+    else:
+        error_massage = "<div class='text-danger'>"
+
+        for error in errors:
+            error_massage += error + "<br>"
+        
+        error_massage += "</div>"
+        flash("<b>Terjadi kesalahan</b>. " + error_massage, 'error')
+        return redirect(url_for('setting'))
+
 
 
 @app.route('/login')
@@ -464,15 +551,40 @@ def loginProses():
     email = request.form['email']
     password = request.form['password']
 
-    response = requests.post('https://reqres.in/api/login',
-                             json={'email': email, 'password': password})
+    # enkripsi password
 
-    if response.status_code == 200:
-        session['email'] = email
-        session['token'] = response.json()['token']
+    # decode password
+    # password = password.encode('utf-8')
 
-        return redirect(url_for('index'))
+    # response = requests.post('https://reqres.in/api/login',
+    #                          json={'email': email, 'password': password})
+
+    cursor.execute("SELECT * FROM users WHERE email = '" + str(email) + "'")
+    
+    # token generate
+    token = email
+    token = token.encode('utf-8')
+    
+    data = cursor.fetchall()
+
+
+    if data:
+        condition = sha256_crypt.verify(password, data[0][4])
+        if condition:
+            session['email'] = email
+            session['success'] = 'Berhasil login'
+            session['nama'] = data[0][1]
+            # session['token'] = token
+
+            flash('Berhasil login', 'success')
+            return redirect(url_for('index'))
+        else:
+            # session['error'] = 'Email atau password salah'
+            flash('Email atau password salah', 'error')
+            return redirect(url_for('login'))
     else:
+        # session['error'] = 'Data tidak ditemukan'
+        flash('Data tidak ditemukan', 'error')
         return redirect(url_for('login'))
 
 
@@ -494,11 +606,56 @@ def registerProses():
     nama = request.form['nama']
     email = request.form['email']
     password = request.form['password']
+    password_confirm = request.form['password-confirmation']
 
-    if nama == '' or email == '' or password == '':
-        return redirect(url_for('register'))
+    errors = []
+    # validasi input
+    if nama == '':
+        errors.append('Nama tidak boleh kosong')
+
+    if email == '':
+        errors.append('Email tidak boleh kosong')
+
+    if password == '':
+        errors.append('Password tidak boleh kosong')
+
+    if password_confirm == '':
+        errors.append('Konfirmasi Password tidak boleh kosong')
+
+    if password != password_confirm:
+        errors.append('Konfirmasi Password tidak sama')
+
+    if (password == password_confirm and len(errors) == 0):
+        try:
+            # enkripsi password
+            password = sha256_crypt.encrypt(password)
+            # transaksi ke database
+            cursor.execute("INSERT INTO users (nama, email, password) VALUES (%s, %s, %s)",
+                        (nama, email, password))
+            
+            connect.commit()
+
+            result = cursor.rowcount
+
+            if result > 0:
+                flash('Data berhasil disimpan', 'success')
+                return redirect(url_for('login'))
+            else:
+                flash('Data gagal disimpan', 'error')
+                return redirect(url_for('register'))
+        except Exception as e:
+            flash('Terjadi kesalahan pada database. ' + str(e), 'error')
+            print(e)
+            return redirect(url_for('register'))
     else:
-        return redirect(url_for('login'))
+        error_massage = "<div class='text-danger'>"
+
+        for error in errors:
+            error_massage += error + "<br>"
+        
+        error_massage += "</div>"
+        flash("<b>Terjadi kesalahan</b><br>. " + error_massage, 'error')
+        return redirect(url_for('register'))
 
 
 @app.route('/logout')
@@ -508,6 +665,7 @@ def logout():
         return redirect(url_for('login'))
 
     session.pop('email', None)
+    session.pop('nama', None)
     session.pop('token', None)
 
     return redirect(url_for('index'))
@@ -518,4 +676,4 @@ if __name__ == "__main__":
     with CustomObjectScope({'iou': iou, 'dice_coef': dice_coef, 'dice_loss': dice_loss, 'iou_loss': iou_loss}):
         model = tf.keras.models.load_model(
             "assets/modelSegmenDolphin_DATASET_AUG_500epoch_JaccardLoss_08-02-2023_20-54-23.h5")
-    socketio.run(app, debug=True, port=5000, host='0.0.0.0') # port=5000, host='0.0.0.0'
+    socketio.run(app, debug=True, port=5000) # port=5000, host='0.0.0.0'

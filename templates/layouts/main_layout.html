@@ -20,8 +20,12 @@
     <script
         src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.3/socket.io.js"></script>
 
+    <!-- sweetalert -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script> -->
+
 </head>
-<body>
+<body style="height: 100vh !important;">
     <!-- loading -->
     <div class="loading">
         <div class="box-full d-flex justify-content-center align-items-center">
@@ -31,6 +35,22 @@
             <span class="visually-hidden">Loading...</span>
         </div> -->
     </div>
+
+    <!-- check session error -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %} 
+            {% for category, message in messages %}
+                <script>
+                    Swal.fire({
+                        title: "<h1>Attention!</h1>",
+                        html: "{{ message|safe }}",
+                        icon: "{{ category }}",
+                        button: "<b>OK</b>",
+                    });
+                </script>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
 
     <!-- Navbar Bootsrap -->
     <nav class="navbar navbar-expand-lg navbar-light bg-white shadow">
@@ -74,5 +94,6 @@
     <!-- custom js -->
     <script src="{{ url_for('static',filename='script.js') }}"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    
 </body>
 </html>
